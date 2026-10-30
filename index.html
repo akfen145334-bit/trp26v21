@@ -23,10 +23,12 @@
 </header>
 <main id="app" tabindex="-1"></main>
 <div id="ttsbar" class="ttsbar hidden" role="region" aria-label="Sesli okuma">
-  <div class="ttsinfo"><span class="dot"></span><span id="ttstitle">Okunuyor…</span></div>
+  <div class="ttsinfo"><span class="dot"></span><span id="ttstitle">Okunuyor…</span><span id="ttsprog" class="ttsprog"></span><span id="ttslock" class="ttslock hidden" title="Okuma sürerken ekran açık tutuluyor">🔆</span></div>
   <div class="ttsctl">
-    <button type="button" id="ttsPause" title="Duraklat / devam">⏯</button>
-    <label class="rate">Hız <select id="ttsRate"><option value="0.8">0.8×</option><option value="1" selected>1×</option><option value="1.2">1.2×</option><option value="1.4">1.4×</option></select></label>
+    <button type="button" id="ttsPrev" title="Önceki cümle">⏮</button>
+    <button type="button" id="ttsPause" title="Duraklat / devam">⏸</button>
+    <button type="button" id="ttsNext" title="Sonraki cümle">⏭</button>
+    <label class="rate">Hız <select id="ttsRate"><option value="0.8">0.8×</option><option value="1">1×</option><option value="1.2">1.2×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select></label>
     <button type="button" id="ttsStop" title="Durdur">⏹</button>
   </div>
 </div>

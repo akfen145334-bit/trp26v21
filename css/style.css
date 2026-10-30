@@ -73,7 +73,9 @@ input[type=text]:focus,select:focus{outline:2px solid var(--brand2);outline-offs
 .tabs{display:flex;gap:6px;overflow-x:auto;border-bottom:1px solid var(--line);margin:14px 0 18px;scrollbar-width:none}
 .tabs a{white-space:nowrap;padding:10px 14px;text-decoration:none;color:var(--muted);font-weight:600;border-bottom:3px solid transparent;margin-bottom:-1px}
 .tabs a.on{color:var(--ink);border-color:var(--c,var(--brand))}
-.notes-layout{display:grid;grid-template-columns:240px 1fr;gap:22px;align-items:start}
+.notes-layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:22px;align-items:start}
+.notes-layout>*{min-width:0}
+.prose{overflow-wrap:anywhere}
 .toc{position:sticky;top:70px;max-height:calc(100vh - 90px);overflow:auto;font-size:.9rem;padding:12px}
 .toc a{display:block;padding:5px 8px;border-radius:7px;text-decoration:none;color:var(--muted)}
 .toc a:hover{background:var(--surface2);color:var(--ink)}
@@ -148,6 +150,9 @@ input[type=text]:focus,select:focus{outline:2px solid var(--brand2);outline-offs
 .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite alternate;flex:none}
 @keyframes pulse{to{opacity:.3}}
 .ttsctl{display:flex;gap:6px;align-items:center}
+.ttsprog{font-size:.75rem;opacity:.75;flex:none}
+.ttslock{flex:none;font-size:.85rem}
+@media (max-width:520px){.ttsbar{flex-direction:column;gap:6px;border-radius:16px;padding:8px 10px;width:calc(100% - 24px)}.ttsinfo span:nth-child(2){max-width:60vw}.ttsctl button{width:34px;height:34px}}
 .ttsctl button{background:rgba(255,255,255,.14);border:0;color:#fff;border-radius:999px;width:36px;height:36px}
 .ttsctl .rate{font-size:.8rem;display:flex;gap:4px;align-items:center}
 .ttsctl select{padding:3px 4px;border-radius:7px;font-size:.8rem;background:#fff;color:#1d2430}
@@ -162,7 +167,7 @@ input[type=text]:focus,select:focus{outline:2px solid var(--brand2);outline-offs
 .userlist button{text-align:left}
 
 @media (max-width:780px){
-  .notes-layout{grid-template-columns:1fr}
+  .notes-layout{grid-template-columns:minmax(0,1fr)}
   .toc{position:static;max-height:none}
   .toc-wrap{order:-1}
   .match{grid-template-columns:1fr}

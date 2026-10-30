@@ -61,7 +61,10 @@
 
   /* ---------------- sesli okuma (Web Speech API) ---------------- */
   const tts = (function () {
-    const synth = window.speechSynthesis; let queue = [], idx = 0, playing = false, paused = false, voice = null, rate = 1;
+    const synth = window.speechSynthesis;
+    let queue = [], idx = 0, playing = false, paused = false, voice = null, title = '';
+    let rate = parseFloat(store.get('vk_rate', 1)) || 1;
+    let wakeLock = null, keepAlive = null, interrupted = false, token = 0;
     const bar = $('#ttsbar');
     function pickVoice() {
       if (!synth) return null; const vs = synth.getVoices();
@@ -70,31 +73,99 @@
     if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
     function chunk(text) {
       const parts = text.replace(/\s+/g, ' ').match(/[^.!?…:;]+[.!?…:;]*\s*/g) || [text]; const out = []; let cur = '';
-      parts.forEach(p => { if ((cur + p).length > 220) { if (cur) out.push(cur); cur = p; } else cur += p; });
+      parts.forEach(p => { if ((cur + p).length > 200) { if (cur) out.push(cur); cur = p; } else cur += p; });
       if (cur.trim()) out.push(cur); return out;
     }
-    function next() {
-      if (!playing) return;
+
+    /* Ekran açık kalsın: Screen Wake Lock API */
+    async function lockScreen() {
+      try { if ('wakeLock' in navigator && !wakeLock && document.visibilityState === 'visible') { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; updateBar(); }); } } catch (e) { wakeLock = null; }
+      updateBar();
+    }
+    function unlockScreen() { try { if (wakeLock) wakeLock.release(); } catch (e) { } wakeLock = null; }
+
+    /* Arka planda sayfayı canlı tutmak için sessiz ses + kilit ekranı kontrolleri (Media Session) */
+    function silentWav() {
+      const sr = 8000, n = sr * 2, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+      const w = (o, str) => { for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
+      w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+      return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+    }
+    function startKeepAlive() {
+      try {
+        if (!keepAlive) { keepAlive = new Audio(silentWav()); keepAlive.loop = true; keepAlive.volume = 0.01; keepAlive.setAttribute('playsinline', ''); }
+        const p = keepAlive.play(); if (p && p.catch) p.catch(() => { });
+      } catch (e) { }
+      if ('mediaSession' in navigator) {
+        try {
+          navigator.mediaSession.metadata = new MediaMetadata({ title: title || 'Sesli okuma', artist: 'Vize Kampı', album: 'Konu anlatımı' });
+          navigator.mediaSession.setActionHandler('play', () => { if (paused) toggle(); });
+          navigator.mediaSession.setActionHandler('pause', () => { if (!paused) toggle(); });
+          navigator.mediaSession.setActionHandler('stop', stop);
+          navigator.mediaSession.setActionHandler('nexttrack', () => skip(1));
+          navigator.mediaSession.setActionHandler('previoustrack', () => skip(-1));
+          navigator.mediaSession.playbackState = 'playing';
+        } catch (e) { }
+      }
+    }
+    function stopKeepAlive() { try { if (keepAlive) keepAlive.pause(); } catch (e) { } if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'none'; } catch (e) { } } }
+
+    function updateBar() {
+      const p = $('#ttsprog'); if (p) p.textContent = queue.length ? `${Math.min(idx + 1, queue.length)}/${queue.length}` : '';
+      const l = $('#ttslock'); if (l) l.classList.toggle('hidden', !wakeLock);
+      const b = $('#ttsPause'); if (b) b.textContent = paused ? '▶' : '⏸';
+    }
+    function speakCurrent() {
+      if (!playing || paused) return;
       if (idx >= queue.length) { stop(); return; }
+      const my = ++token;
       const u = new SpeechSynthesisUtterance(queue[idx]); u.lang = 'tr-TR'; if (voice) u.voice = voice; u.rate = rate;
-      u.onend = () => { if (playing && !paused) { idx++; next(); } };
-      u.onerror = () => { if (playing && !paused) { idx++; next(); } };
-      synth.speak(u);
+      u.onend = () => { if (my !== token || !playing || paused) return; idx++; store.set('vk_tts_pos', { title, idx }); updateBar(); speakCurrent(); };
+      u.onerror = e => {
+        if (my !== token || !playing || paused) return;
+        // Sistem (ekran kilidi, başka ses) okumayı kestiyse aynı parçadan devam etmek üzere işaretle
+        if (e && (e.error === 'interrupted' || e.error === 'canceled' || e.error === 'audio-busy')) { interrupted = true; return; }
+        idx++; speakCurrent();
+      };
+      updateBar();
+      try { synth.speak(u); } catch (e) { interrupted = true; }
     }
-    function play(title, text) {
+    function play(t, text) {
       if (!synth) { alert('Tarayıcınız sesli okumayı desteklemiyor. Chrome, Edge veya Safari deneyin.'); return; }
-      stop(); queue = chunk(text); idx = 0; playing = true; paused = false;
-      $('#ttstitle').textContent = title; bar.classList.remove('hidden');
-      if (!voice) pickVoice(); next();
+      stop(); title = t; queue = chunk(text); idx = 0; playing = true; paused = false; interrupted = false;
+      $('#ttstitle').textContent = t; bar.classList.remove('hidden');
+      if (!voice) pickVoice();
+      lockScreen(); startKeepAlive(); speakCurrent();
     }
-    function stop() { playing = false; paused = false; queue = []; if (synth) synth.cancel(); bar.classList.add('hidden'); }
+    function stop() {
+      playing = false; paused = false; interrupted = false; queue = []; token++;
+      if (synth) synth.cancel(); bar.classList.add('hidden'); unlockScreen(); stopKeepAlive();
+    }
     function toggle() {
       if (!playing) return;
-      if (!paused) { paused = true; synth.cancel(); } else { paused = false; next(); }
+      if (!paused) { paused = true; token++; synth.cancel(); try { keepAlive && keepAlive.pause(); } catch (e) { } if ('mediaSession' in navigator) try { navigator.mediaSession.playbackState = 'paused'; } catch (e) { } }
+      else { paused = false; startKeepAlive(); lockScreen(); speakCurrent(); }
+      updateBar();
     }
+    function skip(d) { if (!playing) return; token++; synth.cancel(); idx = Math.max(0, Math.min(queue.length - 1, idx + d)); paused = false; speakCurrent(); }
+    function resumeIfNeeded() {
+      if (!playing || paused) return;
+      lockScreen();
+      // Kilit açılınca: okuma kesildiyse ya da sessizce durduysa kaldığı parçadan sürdür
+      if (interrupted || (!synth.speaking && !synth.pending)) { interrupted = false; token++; synth.cancel(); speakCurrent(); }
+      else if (synth.paused) { try { synth.resume(); } catch (e) { } }
+    }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') resumeIfNeeded(); });
+    window.addEventListener('pageshow', resumeIfNeeded);
+    window.addEventListener('focus', resumeIfNeeded);
+    // Bazı tarayıcılar uzun okumada sessizce takılır: düzenli kontrol
+    setInterval(() => { if (playing && !paused && document.visibilityState === 'visible' && !synth.speaking && !synth.pending) { token++; speakCurrent(); } }, 4000);
+
     $('#ttsStop').onclick = stop; $('#ttsPause').onclick = toggle;
-    $('#ttsRate').onchange = e => { rate = parseFloat(e.target.value); if (playing && !paused) { synth.cancel(); next(); } };
-    window.addEventListener('hashchange', () => { });
+    $('#ttsPrev').onclick = () => skip(-1); $('#ttsNext').onclick = () => skip(1);
+    const rs = $('#ttsRate'); rs.value = String(rate); if (!rs.value) { rate = 1; rs.value = '1'; }
+    rs.onchange = e => { rate = parseFloat(e.target.value); store.set('vk_rate', rate); if (playing && !paused) { token++; synth.cancel(); speakCurrent(); } };
     return { play, stop, get playing() { return playing; } };
   })();
 

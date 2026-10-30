@@ -34,5 +34,5 @@ Dersler: `antik` (Antik Yerleşimler), `dinler`, `sanat`, `mito` (Türk Mitoloji
 ## Notlar
 - Adıyla (ya da misafir olarak) giren kişinin çözdüğü her soru doğru/yanlış olarak kaydedilir. Yeni testlerde **çözülmüş sorular tekrar gelmez**, yalnızca henüz sorulmamış sorular sorulur. Yanlışlar “Yanlışlarımı Tekrar” modunda, istenirse tüm sorular “Çözdüklerimi de sor” seçeneğiyle tekrar çözülebilir.
 - Kayıtlar (ad / misafir, ders ders eksikler) tarayıcının yerel depolamasında tutulur. Başka cihaza taşımak için **Eksiklerim → Dışa aktar / İçe aktar**.
-- Sesli okuma tarayıcının yerleşik Türkçe sesini kullanır (Chrome, Edge, Safari).
+- Sesli okuma tarayıcının yerleşik Türkçe sesini kullanır (Chrome, Edge, Safari). Hız 0.8×–2× arası seçilebilir ve hatırlanır. Okuma sürerken ekran açık tutulur (Screen Wake Lock); ekran kilitlenip okuma kesilirse, kilit açılınca kaldığı cümleden devam eder. Kilit ekranı / kulaklık düğmeleriyle duraklat-devam-ileri-geri yapılabilir.
 - PDF: **Eksiklerim → PDF olarak al → Yazdır / PDF olarak kaydet**.
