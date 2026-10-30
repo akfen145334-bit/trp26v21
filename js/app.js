@@ -8,7 +8,12 @@
   const app = $('#app');
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const stripHtml = h => { const d = document.createElement('div'); d.innerHTML = h; $$('figure,script,style', d).forEach(x => x.remove()); return d.textContent.replace(/\s+/g, ' ').trim(); };
+  const stripHtml = h => {
+    const d = document.createElement('div'); d.innerHTML = h; $$('figure,script,style,img', d).forEach(x => x.remove());
+    // Liste, tablo hücresi ve başlıklardan sonra durak ekle; yoksa sesli okuma kelimeleri birbirine yapıştırır
+    $$('li,td,th,p,h1,h2,h3,h4,div,br,.box > b:first-child,figcaption', d).forEach(x => x.insertAdjacentText('beforeend', '. '));
+    return d.textContent.replace(/[→←]/g, ', ').replace(/\s*\.\s*(\.\s*)+/g, '. ').replace(/([:;!?])\s*\./g, '$1').replace(/\s+/g, ' ').trim();
+  };
 
   /* ---------------- depolama ---------------- */
   const store = {
@@ -64,110 +69,133 @@
     const synth = window.speechSynthesis;
     let queue = [], idx = 0, playing = false, paused = false, voice = null, title = '';
     let rate = parseFloat(store.get('vk_rate', 1)) || 1;
-    let wakeLock = null, keepAlive = null, interrupted = false, token = 0;
+    let wakeLock = null, waiting = false, token = 0, lastTick = 0, retries = 0, unlocked = false, timer = null;
     const bar = $('#ttsbar');
+    const MAXLEN = 160; // Chrome ~15 sn'den uzun cümlelerde sesi kesiyor; kısa parçalar güvenli
+
     function pickVoice() {
-      if (!synth) return null; const vs = synth.getVoices();
-      voice = vs.find(v => /tr[-_]TR/i.test(v.lang) && /google|yelda|emel|natural|online/i.test(v.name)) || vs.find(v => /^tr/i.test(v.lang)) || null; return voice;
+      if (!synth) return null; const vs = synth.getVoices() || [];
+      const tr = vs.filter(v => /^tr([-_]|$)/i.test(v.lang));
+      voice = tr.find(v => v.localService && /yelda|emel|cem|filiz|tolga/i.test(v.name)) || tr.find(v => v.localService) || tr.find(v => /google/i.test(v.name)) || tr[0] || null;
+      return voice;
     }
-    if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
+    if (synth) { pickVoice(); if ('onvoiceschanged' in synth) synth.onvoiceschanged = pickVoice; else synth.addEventListener && synth.addEventListener('voiceschanged', pickVoice); }
+
+    function hardSplit(p) { // noktası olmayan çok uzun parçaları virgül / boşluktan böl
+      const out = []; let rest = p.trim();
+      while (rest.length > MAXLEN) {
+        let cut = Math.max(rest.lastIndexOf(', ', MAXLEN), rest.lastIndexOf(' – ', MAXLEN), rest.lastIndexOf(' - ', MAXLEN));
+        if (cut < MAXLEN * 0.4) cut = rest.lastIndexOf(' ', MAXLEN);
+        if (cut < 20) cut = MAXLEN;
+        out.push(rest.slice(0, cut + 1).trim()); rest = rest.slice(cut + 1).trim();
+      }
+      if (rest) out.push(rest); return out;
+    }
     function chunk(text) {
-      const parts = text.replace(/\s+/g, ' ').match(/[^.!?…:;]+[.!?…:;]*\s*/g) || [text]; const out = []; let cur = '';
-      parts.forEach(p => { if ((cur + p).length > 200) { if (cur) out.push(cur); cur = p; } else cur += p; });
-      if (cur.trim()) out.push(cur); return out;
+      const parts = text.replace(/\s+/g, ' ').match(/[^.!?…:;]+[.!?…:;]*\s*/g) || [text];
+      const out = []; let cur = '';
+      parts.forEach(p => {
+        if (p.length > MAXLEN) { if (cur.trim()) out.push(cur.trim()); cur = ''; out.push(...hardSplit(p)); return; }
+        if ((cur + p).length > MAXLEN) { if (cur.trim()) out.push(cur.trim()); cur = p; } else cur += p;
+      });
+      if (cur.trim()) out.push(cur.trim());
+      return out.filter(x => /[\p{L}\p{N}]/u.test(x));
     }
 
-    /* Ekran açık kalsın: Screen Wake Lock API */
+    /* Okuma sürerken ekran açık kalsın (Screen Wake Lock) */
     async function lockScreen() {
       try { if ('wakeLock' in navigator && !wakeLock && document.visibilityState === 'visible') { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; updateBar(); }); } } catch (e) { wakeLock = null; }
       updateBar();
     }
     function unlockScreen() { try { if (wakeLock) wakeLock.release(); } catch (e) { } wakeLock = null; }
 
-    /* Arka planda sayfayı canlı tutmak için sessiz ses + kilit ekranı kontrolleri (Media Session) */
-    function silentWav() {
-      const sr = 8000, n = sr * 2, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
-      const w = (o, str) => { for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
-      w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-      v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
-      return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
-    }
-    function startKeepAlive() {
-      try {
-        if (!keepAlive) { keepAlive = new Audio(silentWav()); keepAlive.loop = true; keepAlive.volume = 0.01; keepAlive.setAttribute('playsinline', ''); }
-        const p = keepAlive.play(); if (p && p.catch) p.catch(() => { });
-      } catch (e) { }
-      if ('mediaSession' in navigator) {
-        try {
-          navigator.mediaSession.metadata = new MediaMetadata({ title: title || 'Sesli okuma', artist: 'Vize Kampı', album: 'Konu anlatımı' });
-          navigator.mediaSession.setActionHandler('play', () => { if (paused) toggle(); });
-          navigator.mediaSession.setActionHandler('pause', () => { if (!paused) toggle(); });
-          navigator.mediaSession.setActionHandler('stop', stop);
-          navigator.mediaSession.setActionHandler('nexttrack', () => skip(1));
-          navigator.mediaSession.setActionHandler('previoustrack', () => skip(-1));
-          navigator.mediaSession.playbackState = 'playing';
-        } catch (e) { }
-      }
-    }
-    function stopKeepAlive() { try { if (keepAlive) keepAlive.pause(); } catch (e) { } if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'none'; } catch (e) { } } }
-
+    function msg(t) { const el = $('#ttstitle'); if (el) el.textContent = t; }
     function updateBar() {
       const p = $('#ttsprog'); if (p) p.textContent = queue.length ? `${Math.min(idx + 1, queue.length)}/${queue.length}` : '';
       const l = $('#ttslock'); if (l) l.classList.toggle('hidden', !wakeLock);
       const b = $('#ttsPause'); if (b) b.textContent = paused ? '▶' : '⏸';
     }
+    function later(fn, ms) { clearTimeout(timer); timer = setTimeout(fn, ms); }
+
     function speakCurrent() {
+      clearTimeout(timer);
       if (!playing || paused) return;
       if (idx >= queue.length) { stop(); return; }
       const my = ++token;
-      const u = new SpeechSynthesisUtterance(queue[idx]); u.lang = 'tr-TR'; if (voice) u.voice = voice; u.rate = rate;
-      u.onend = () => { if (my !== token || !playing || paused) return; idx++; store.set('vk_tts_pos', { title, idx }); updateBar(); speakCurrent(); };
+      const u = new SpeechSynthesisUtterance(queue[idx]);
+      u.lang = (voice && voice.lang) || 'tr-TR'; if (voice) u.voice = voice; u.rate = rate; u.pitch = 1; u.volume = 1;
+      u.onstart = () => { if (my === token) { lastTick = Date.now(); retries = 0; } };
+      u.onboundary = () => { if (my === token) lastTick = Date.now(); };
+      u.onend = () => {
+        if (my !== token || !playing || paused) return;
+        lastTick = Date.now(); idx++; updateBar();
+        // Ekran kilitliyken zamanlayıcılar yavaşlar: bir sonraki cümleyi hemen başlat
+        if (document.visibilityState === 'hidden') speakCurrent(); else later(speakCurrent, 30);
+      };
       u.onerror = e => {
         if (my !== token || !playing || paused) return;
-        // Sistem (ekran kilidi, başka ses) okumayı kestiyse aynı parçadan devam etmek üzere işaretle
-        if (e && (e.error === 'interrupted' || e.error === 'canceled' || e.error === 'audio-busy')) { interrupted = true; return; }
-        idx++; speakCurrent();
+        const er = (e && e.error) || '';
+        if (er === 'not-allowed') { msg('Sesli okuma için önce ekrana dokun, sonra ▶'); paused = true; updateBar(); return; }
+        if (er === 'interrupted' || er === 'canceled' || er === 'audio-busy') {
+          // Sistem kesti (ekran kilidi, gelen bildirim vb.): aynı cümleyi tekrar dene
+          if (document.visibilityState === 'hidden') { waiting = true; return; }
+          if (++retries <= 3) { later(speakCurrent, 400); return; }
+        }
+        if ((er === 'voice-unavailable' || er === 'language-unavailable' || er === 'synthesis-failed') && voice) { voice = null; later(speakCurrent, 100); return; }
+        retries = 0; idx++; later(speakCurrent, 100);
       };
-      updateBar();
-      try { synth.speak(u); } catch (e) { interrupted = true; }
+      lastTick = Date.now(); updateBar();
+      try { if (synth.paused) synth.resume(); synth.speak(u); } catch (e) { later(speakCurrent, 500); }
     }
     function play(t, text) {
-      if (!synth) { alert('Tarayıcınız sesli okumayı desteklemiyor. Chrome, Edge veya Safari deneyin.'); return; }
-      stop(); title = t; queue = chunk(text); idx = 0; playing = true; paused = false; interrupted = false;
-      $('#ttstitle').textContent = t; bar.classList.remove('hidden');
+      if (!synth || typeof SpeechSynthesisUtterance === 'undefined') { alert('Bu tarayıcı sesli okumayı desteklemiyor. Chrome, Edge veya Safari kullan.'); return; }
+      const wasBusy = synth.speaking || synth.pending;
+      token++; clearTimeout(timer); synth.cancel();
+      title = t; queue = chunk(text); idx = 0; playing = true; paused = false; waiting = false; retries = 0;
+      if (!queue.length) { stop(); return; }
+      msg(t); bar.classList.remove('hidden');
       if (!voice) pickVoice();
-      lockScreen(); startKeepAlive(); speakCurrent();
+      lockScreen();
+      // iOS / Safari: ilk konuşma mutlaka dokunma anında başlamalı
+      if (!unlocked) { try { const w = new SpeechSynthesisUtterance(' '); w.volume = 0; synth.speak(w); } catch (e) { } unlocked = true; }
+      // Chrome: cancel() hemen ardından gelen speak() bazen sessiz kalıyor; kısa bekle
+      if (wasBusy) later(speakCurrent, 150); else speakCurrent();
     }
     function stop() {
-      playing = false; paused = false; interrupted = false; queue = []; token++;
-      if (synth) synth.cancel(); bar.classList.add('hidden'); unlockScreen(); stopKeepAlive();
+      playing = false; paused = false; waiting = false; queue = []; token++; clearTimeout(timer);
+      try { synth && synth.cancel(); } catch (e) { }
+      bar.classList.add('hidden'); unlockScreen();
     }
     function toggle() {
       if (!playing) return;
-      if (!paused) { paused = true; token++; synth.cancel(); try { keepAlive && keepAlive.pause(); } catch (e) { } if ('mediaSession' in navigator) try { navigator.mediaSession.playbackState = 'paused'; } catch (e) { } }
-      else { paused = false; startKeepAlive(); lockScreen(); speakCurrent(); }
+      if (!paused) { paused = true; token++; clearTimeout(timer); synth.cancel(); }
+      else { paused = false; lockScreen(); msg(title); later(speakCurrent, 120); }
       updateBar();
     }
-    function skip(d) { if (!playing) return; token++; synth.cancel(); idx = Math.max(0, Math.min(queue.length - 1, idx + d)); paused = false; speakCurrent(); }
+    function skip(d) { if (!playing) return; token++; synth.cancel(); idx = Math.max(0, Math.min(queue.length - 1, idx + d)); paused = false; retries = 0; later(speakCurrent, 150); }
     function resumeIfNeeded() {
-      if (!playing || paused) return;
+      if (!playing || paused || document.visibilityState !== 'visible') return;
       lockScreen();
-      // Kilit açılınca: okuma kesildiyse ya da sessizce durduysa kaldığı parçadan sürdür
-      if (interrupted || (!synth.speaking && !synth.pending)) { interrupted = false; token++; synth.cancel(); speakCurrent(); }
+      if (waiting || (!synth.speaking && !synth.pending)) { waiting = false; token++; synth.cancel(); later(speakCurrent, 250); }
       else if (synth.paused) { try { synth.resume(); } catch (e) { } }
     }
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') resumeIfNeeded(); });
     window.addEventListener('pageshow', resumeIfNeeded);
     window.addEventListener('focus', resumeIfNeeded);
-    // Bazı tarayıcılar uzun okumada sessizce takılır: düzenli kontrol
-    setInterval(() => { if (playing && !paused && document.visibilityState === 'visible' && !synth.speaking && !synth.pending) { token++; speakCurrent(); } }, 4000);
+    // Bekçi: tarayıcı sessizce takılırsa (olay gelmezse) kaldığı cümleden sürdür
+    setInterval(() => {
+      if (!playing || paused || document.visibilityState !== 'visible') return;
+      if (synth.paused && synth.speaking) { try { synth.resume(); } catch (e) { } }
+      if (!synth.speaking && !synth.pending && Date.now() - lastTick > 5000) { token++; speakCurrent(); }
+    }, 2500);
 
     $('#ttsStop').onclick = stop; $('#ttsPause').onclick = toggle;
     $('#ttsPrev').onclick = () => skip(-1); $('#ttsNext').onclick = () => skip(1);
     const rs = $('#ttsRate'); rs.value = String(rate); if (!rs.value) { rate = 1; rs.value = '1'; }
-    rs.onchange = e => { rate = parseFloat(e.target.value); store.set('vk_rate', rate); if (playing && !paused) { token++; synth.cancel(); speakCurrent(); } };
-    return { play, stop, get playing() { return playing; } };
+    rs.onchange = e => { rate = parseFloat(e.target.value) || 1; store.set('vk_rate', rate); if (playing && !paused) { token++; synth.cancel(); later(speakCurrent, 150); } };
+    return { play, stop, get playing() { return playing; }, _chunk: chunk };
   })();
+  window.__tts = tts; window.__strip = stripHtml;
 
   /* ---------------- kullanıcı girişi ---------------- */
   function renderUserChip() { $('#userchip').textContent = '👤 ' + (user.name || 'Giriş yap'); }
