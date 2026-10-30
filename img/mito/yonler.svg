@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" font-family="Georgia,serif"><rect width="400" height="400" fill="#f7f1e3"/>
+<circle cx="200" cy="200" r="170" fill="none" stroke="#8a7a5c" stroke-width="2"/>
+<path d="M200 200 L200 30 A170 170 0 0 1 370 200 Z" fill="#2f6db5" opacity=".0"/>
+<g stroke="#5b4b2e" stroke-width="2">
+<path d="M200 200 L80 80 A170 170 0 0 1 320 80 Z" fill="#1d1d1d"/>
+<path d="M200 200 L320 80 A170 170 0 0 1 320 320 Z" fill="#3b7dc4"/>
+<path d="M200 200 L320 320 A170 170 0 0 1 80 320 Z" fill="#c0392b"/>
+<path d="M200 200 L80 320 A170 170 0 0 1 80 80 Z" fill="#ffffff"/>
+<circle cx="200" cy="200" r="55" fill="#e5b630"/></g>
+<g font-size="20" font-weight="bold" text-anchor="middle">
+<text x="200" y="85" fill="#fff">?</text><text x="320" y="207" fill="#fff">?</text><text x="200" y="330" fill="#fff">?</text><text x="80" y="207" fill="#333">?</text><text x="200" y="207" fill="#333">?</text></g>
+<g font-size="16" fill="#333" text-anchor="middle"><text x="200" y="22">KUZEY</text><text x="200" y="395">GÜNEY</text><text x="388" y="205" text-anchor="end">DOĞU</text><text x="12" y="205" text-anchor="start">BATI</text></g>
+</svg>

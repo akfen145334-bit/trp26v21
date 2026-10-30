@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 300" font-family="Inter,Arial,sans-serif" font-size="15"><rect width="440" height="300" fill="#f5f1fa"/>
+<path d="M220 20 L290 100 H150Z" fill="#6c3483"/><path d="M150 100 H290 L350 180 H90Z" fill="#8e44ad"/><path d="M90 180 H350 L410 260 H30Z" fill="#bb8fd2"/>
+<g fill="#fff" text-anchor="middle" font-weight="bold"><text x="220" y="80">A</text><text x="220" y="150">B</text><text x="220" y="230">C</text></g>
+<text x="220" y="285" text-anchor="middle" fill="#444" font-size="13">← işçiler / operasyon →</text></svg>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vize Kampı · 2. Sınıf</title>
+<meta name="description" content="2. sınıf vize hazırlık: konu anlatımı, sesli dinleme, etkileşimli testler ve kişisel eksik takibi.">
+<meta name="theme-color" content="#1f3a5f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f3a5f'/%3E%3Cpath d='M14 44V22l18-8 18 8v22' fill='none' stroke='%23f2c14e' stroke-width='5' stroke-linejoin='round'/%3E%3Cpath d='M22 44V28M32 44V28M42 44V28' stroke='%23fff' stroke-width='4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a href="#/" class="brand"><span class="logo">VK</span><span>Vize Kampı</span></a>
+  <nav class="topnav">
+    <a href="#/" data-nav="home">Dersler</a>
+    <a href="#/eksikler" data-nav="eksik">Eksiklerim</a>
+  </nav>
+  <button class="userchip" id="userchip" type="button" aria-label="Kullanıcı"></button>
+</header>
+<main id="app" tabindex="-1"></main>
+<div id="ttsbar" class="ttsbar hidden" role="region" aria-label="Sesli okuma">
+  <div class="ttsinfo"><span class="dot"></span><span id="ttstitle">Okunuyor…</span></div>
+  <div class="ttsctl">
+    <button type="button" id="ttsPause" title="Duraklat / devam">⏯</button>
+    <label class="rate">Hız <select id="ttsRate"><option value="0.8">0.8×</option><option value="1" selected>1×</option><option value="1.2">1.2×</option><option value="1.4">1.4×</option></select></label>
+    <button type="button" id="ttsStop" title="Durdur">⏹</button>
+  </div>
+</div>
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true"></div>
+<div id="lightbox" class="lightbox hidden"><img alt=""><p></p></div>
+<script src="data/courses.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

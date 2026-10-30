@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#f7f1e3"/>
+<ellipse cx="200" cy="200" rx="160" ry="175" fill="#d9b98a" stroke="#6b4423" stroke-width="14"/>
+<line x1="40" y1="200" x2="360" y2="200" stroke="#8b2e16" stroke-width="3"/>
+<circle cx="200" cy="110" r="26" fill="#e7a52b"/><g stroke="#e7a52b" stroke-width="3"><line x1="200" y1="72" x2="200" y2="62"/><line x1="238" y1="110" x2="248" y2="110"/><line x1="162" y1="110" x2="152" y2="110"/><line x1="227" y1="83" x2="234" y2="76"/><line x1="173" y1="83" x2="166" y2="76"/></g>
+<path d="M120 140 a14 14 0 1 0 14 -22 a11 11 0 1 1 -14 22" fill="#f2f2f2" stroke="#666"/>
+<path d="M90 190 q110 -90 220 0" fill="none" stroke="#3b7dc4" stroke-width="5"/><path d="M98 190 q102 -78 204 0" fill="none" stroke="#c0392b" stroke-width="4"/>
+<g stroke="#2d5016" stroke-width="5"><line x1="200" y1="330" x2="200" y2="225"/><line x1="200" y1="270" x2="165" y2="245"/><line x1="200" y1="270" x2="235" y2="245"/><line x1="200" y1="250" x2="175" y2="230"/><line x1="200" y1="250" x2="225" y2="230"/></g>
+<g fill="#8b2e16"><circle cx="120" cy="290" r="6"/><circle cx="280" cy="290" r="6"/><circle cx="150" cy="320" r="6"/><circle cx="250" cy="320" r="6"/></g>
+<rect x="300" y="300" width="90" height="16" rx="8" fill="#6b4423" transform="rotate(-35 345 308)"/>
+</svg>

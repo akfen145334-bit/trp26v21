@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300" font-family="Inter,Arial,sans-serif"><rect width="520" height="300" fill="#f6f4ef"/>
+<rect x="20" y="30" width="230" height="240" rx="12" fill="#f2d5cf"/><rect x="270" y="30" width="230" height="240" rx="12" fill="#d5ecd4"/>
+<g fill="#7a2e22"><circle cx="70" cy="110" r="9"/><circle cx="95" cy="110" r="9"/><circle cx="120" cy="110" r="9"/><circle cx="145" cy="110" r="9"/><circle cx="170" cy="110" r="9"/><circle cx="195" cy="110" r="9"/><circle cx="70" cy="140" r="9"/><circle cx="95" cy="140" r="9"/><circle cx="120" cy="140" r="9"/><circle cx="145" cy="140" r="9"/><circle cx="170" cy="140" r="9"/><circle cx="195" cy="140" r="9"/></g>
+<g fill="#666"><rect x="60" y="180" width="30" height="70"/><rect x="100" y="165" width="30" height="85"/><rect x="140" y="175" width="30" height="75"/><rect x="180" y="160" width="30" height="90"/></g>
+<g fill="#2e6b2c"><circle cx="350" cy="120" r="9"/><circle cx="372" cy="120" r="9"/><circle cx="420" cy="125" r="9"/></g>
+<path d="M310 250 l25 -40 l25 40z M400 250 l20 -32 l20 32z" fill="#3c8d3a"/><rect x="355" y="205" width="40" height="45" fill="#b98a5a"/><path d="M350 205 l25 -18 l25 18z" fill="#8b5a2b"/>
+<g font-size="22" font-weight="bold" text-anchor="middle"><text x="135" y="70" fill="#7a2e22">1</text><text x="385" y="70" fill="#2e6b2c">2</text></g></svg>

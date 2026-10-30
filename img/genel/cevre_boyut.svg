@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300" font-family="Inter,Arial,sans-serif" font-size="15"><rect width="520" height="300" fill="#f4f7f1"/>
+<g stroke="#4b6b3a" stroke-width="2" fill="none"><path d="M260 60 V95 M140 95 H380 M140 95 V125 M380 95 V125 M140 165 V195 M60 195 H220 M60 195 V220 M220 195 V220"/></g>
+<g stroke="#4b6b3a" stroke-width="2"><rect x="200" y="20" width="120" height="40" rx="8" fill="#d8e8c8"/><rect x="70" y="125" width="140" height="40" rx="8" fill="#e6f0dc"/><rect x="310" y="125" width="140" height="40" rx="8" fill="#e6f0dc"/>
+<rect x="5" y="220" width="110" height="40" rx="8" fill="#fff"/><rect x="165" y="220" width="110" height="40" rx="8" fill="#fff"/></g>
+<g text-anchor="middle" fill="#223"><text x="260" y="45">ÇEVRE</text><text x="140" y="150">A</text><text x="380" y="150">B</text><text x="60" y="245">C</text><text x="220" y="245">D</text></g>
+<text x="300" y="250" font-size="12" fill="#556">C: insanın hazır bulduğu  ·  D: insanın yarattığı</text></svg>

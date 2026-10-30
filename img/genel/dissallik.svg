@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 260" font-family="Inter,Arial,sans-serif" font-size="14"><rect width="520" height="260" fill="#e8f1f8"/><rect y="170" width="520" height="90" fill="#3e7fb5"/>
+<rect x="40" y="80" width="90" height="90" fill="#777"/><rect x="100" y="40" width="18" height="50" fill="#555"/><path d="M109 38 q20 -20 0 -30 q-20 -10 5 -25" stroke="#999" stroke-width="6" fill="none"/>
+<path d="M130 160 q60 10 120 40" stroke="#5a3d1e" stroke-width="10" fill="none"/><ellipse cx="270" cy="205" rx="50" ry="14" fill="#6b4f2a" opacity=".8"/>
+<rect x="360" y="70" width="110" height="100" fill="#f5e6c8" stroke="#c9a46a" stroke-width="2"/><g fill="#7fb3e0"><rect x="375" y="85" width="20" height="20"/><rect x="435" y="85" width="20" height="20"/><rect x="375" y="125" width="20" height="20"/><rect x="435" y="125" width="20" height="20"/></g>
+<text x="60" y="190" fill="#fff">fabrika</text><text x="385" y="190" fill="#fff">otel</text><text x="250" y="240" fill="#fff">atık</text></svg>
