@@ -144,6 +144,7 @@
     viewHome();
   }
   window.addEventListener('hashchange', route);
+  document.addEventListener('click', e => { const a = e.target.closest('a[href^="#"]'); if (a && a.getAttribute('href') === location.hash && !a.dataset.jump) { e.preventDefault(); route(); } });
 
   /* ---------------- ana sayfa ---------------- */
   function viewHome() {
@@ -243,26 +244,33 @@
     ['weak', 'Yanlışlarımı Tekrar', 'Sadece eksik soruların']
   ];
   function tabTest(el, d, meta, params) {
-    const cnt = t => t === 'match' ? (d.pairs || []).length : t === 'mix' ? d.q.length : t === 'weak' ? courseStats(meta.id, d).bad : d.q.filter(q => q.t === t).length;
+    const st = courseStats(meta.id, d); const seen = id => !!st.map[id];
+    const poolOf = t => t === 'match' ? (d.pairs || []) : t === 'mix' ? d.q : d.q.filter(q => q.t === t);
+    const cnt = t => t === 'weak' ? st.bad : poolOf(t).length;
+    const fresh = t => t === 'weak' ? st.bad : poolOf(t).filter(q => !seen(q.id)).length;
     let mode = params.get('m') || 'mix'; let sec = params.get('s') || '';
     const avail = MODES.filter(m => cnt(m[0]) > 0 || m[0] === 'weak');
     if (!avail.find(m => m[0] === mode)) mode = 'mix';
+    const totalAll = d.q.length + (d.pairs || []).length; const seenAll = Object.keys(st.map).filter(id => d.qMap[id]).length;
     el.innerHTML = `<div class="card"><h2>Test ayarları</h2>
-      <div class="modes">${avail.map(([k, t, s]) => `<button class="mode ${k === mode ? 'on' : ''}" data-m="${k}"><b>${t}</b><span>${s} · ${cnt(k)}</span></button>`).join('')}</div>
+      <p class="muted small" style="margin-top:-4px">${esc(user.name || 'Misafir')}: bu dersteki ${totalAll} sorunun <b>${seenAll}</b> tanesini çözdün (${st.ok} doğru, ${st.bad} yanlış). Çözdüğün sorular tekrar sorulmaz; her testte <b>henüz sorulmamış</b> sorular gelir.</p>
+      <div class="modes">${avail.map(([k, t, s]) => `<button class="mode ${k === mode ? 'on' : ''}" data-m="${k}"><b>${t}</b><span>${s} · ${k === 'weak' ? cnt(k) + ' soru' : fresh(k) + ' yeni / ' + cnt(k)}</span></button>`).join('')}</div>
       <div class="row" style="margin-top:14px">
         <label>Konu: <select id="sec"><option value="">Tüm konular</option>${d.sections.map(s => `<option value="${s.id}" ${s.id === sec ? 'selected' : ''}>${esc(s.t)}</option>`).join('')}</select></label>
         <label>Soru sayısı: <select id="n"><option>10</option><option selected>20</option><option>30</option><option>50</option><option value="9999">Tümü</option></select></label>
+        <label class="small"><input type="checkbox" id="rep"> Çözdüklerimi de sor (tekrar)</label>
         <button class="btn primary" id="go">Başla ▶</button>
       </div></div>`;
     $$('.mode', el).forEach(b => b.onclick = () => { mode = b.dataset.m; $$('.mode', el).forEach(x => x.classList.toggle('on', x === b)); });
-    $('#go', el).onclick = () => startQuiz(el, d, meta, mode, $('#sec', el).value, parseInt($('#n', el).value, 10));
-    if (params.get('auto')) startQuiz(el, d, meta, mode, sec, 20);
+    $('#go', el).onclick = () => startQuiz(el, d, meta, mode, $('#sec', el).value, parseInt($('#n', el).value, 10), $('#rep', el).checked);
+    if (params.get('auto')) startQuiz(el, d, meta, mode, sec, 20, params.get('rep') === '1');
   }
 
-  function buildSet(d, meta, mode, sec, n) {
+  function buildSet(d, meta, mode, sec, n, rep) {
     const st = courseStats(meta.id, d);
-    let pool = d.q.filter(q => !sec || q.s === sec);
-    let pairs = (d.pairs || []).filter(p => !sec || p.s === sec);
+    const unseen = q => rep || !st.map[q.id];
+    let pool = d.q.filter(q => (!sec || q.s === sec) && unseen(q));
+    let pairs = (d.pairs || []).filter(p => (!sec || p.s === sec) && unseen(p));
     let items = [];
     const mkMatch = (src) => { const out = []; const sh = shuffle(src); for (let i = 0; i + 3 <= sh.length && out.length < Math.ceil(n / 1); i += 5) out.push({ t: 'match', pairs: sh.slice(i, i + 5) }); return out; };
     if (mode === 'weak') {
@@ -281,10 +289,18 @@
     return shuffle(pool.filter(q => q.t === mode)).slice(0, n);
   }
 
-  function startQuiz(el, d, meta, mode, sec, n) {
+  function startQuiz(el, d, meta, mode, sec, n, rep) {
     tts.stop();
-    const items = buildSet(d, meta, mode, sec, n);
-    if (!items.length) { el.innerHTML = `<div class="card"><p>Bu seçimde soru bulunamadı.</p><a class="btn" href="#/ders/${meta.id}/test">Geri</a></div>`; return; }
+    const items = buildSet(d, meta, mode, sec, n, rep);
+    if (!items.length) {
+      const back = new URLSearchParams('m=' + mode + (sec ? '&s=' + sec : ''));
+      if (mode === 'weak') { el.innerHTML = `<div class="card"><h2>Eksiğin yok 🎉</h2><p class="muted">Bu seçimde yanlış yaptığın soru kalmadı.</p><a class="btn" href="#/ders/${meta.id}/test">Geri</a></div>`; return; }
+      el.innerHTML = `<div class="card"><h2>Bu bölümdeki bütün soruları çözdün 🎉</h2>
+        <p class="muted">Seçtiğin türde ve konuda sana henüz sorulmamış soru kalmadı. Doğruların ve yanlışların kayıtlı.</p>
+        <div class="row"><a class="btn primary" href="#/ders/${meta.id}/test?m=weak&auto=1">🔁 Yanlışlarımı çöz</a><button class="btn" id="again2">Çözdüklerimle tekrar et</button><a class="btn ghost" href="#/ders/${meta.id}/test">Başka tür / konu seç</a></div></div>`;
+      $('#again2', el).onclick = () => startQuiz(el, d, meta, mode, sec, n, true);
+      return;
+    }
     let i = 0, score = 0, max = 0; const secRes = {};
     const mark = (q, ok) => { record(meta.id, q.id, ok); max++; if (ok) score++; const s = secRes[q.s] = secRes[q.s] || { ok: 0, n: 0 }; s.n++; if (ok) s.ok++; };
     function head() { return `<div class="qtop"><span>Soru ${i + 1} / ${items.length}</span><span>✅ ${score} / ${max}</span><button class="btn sm ghost" id="quit">Bitir</button></div><div class="bar" style="margin-bottom:16px"><i style="width:${i / items.length * 100}%"></i></div>`; }
@@ -412,6 +428,8 @@
           ${wrong.length ? `<button class="btn" id="listenWeak">🔊 Eksiklerimi dinle</button>` : ''}
           ${wrong.length ? `<a class="btn" href="#/yazdir/${meta.id}">📄 PDF olarak al</a>` : ''}
           <button class="btn ghost" id="reset">Bu dersin kaydını sıfırla</button></div></div>
+      ${st.ok ? `<details class="card"><summary><b>✔ Doğru yaptığın sorular (${st.ok})</b> <span class="muted small">— bunlar yeni testlerde tekrar sorulmaz</span></summary>
+        ${d.sections.map(s => { const ok = Object.keys(st.map).filter(id => st.map[id].l && d.qMap[id] && d.qMap[id].s === s.id).map(id => d.qMap[id]); return ok.length ? `<h4 style="margin:12px 0 4px">${esc(s.t)} <span class="pill ok">${ok.length}</span></h4>${ok.map(q => `<div class="wq"><div>${esc(qText(q))}</div><div class="a">✔ ${esc(ansText(q))}</div></div>`).join('')}` : ''; }).join('')}</details>` : ''}
       <div class="card"><h3>Konu bazında durumun</h3>${secs.map(x => `<div class="topicrow"><a href="#/ders/${meta.id}/konu?s=${x.s.id}">${esc(x.s.t)}</a><div class="bar"><i style="width:${x.ok / (x.ok + x.bad) * 100}%;background:${x.ok / (x.ok + x.bad) < .6 ? 'var(--bad)' : 'var(--ok)'}"></i></div><span class="small">${x.ok}/${x.ok + x.bad}</span></div>`).join('')}</div>
       ${weakSecs.map(x => `<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">❗ ${esc(x.s.t)} <span class="pill bad">${x.bad} eksik</span></h3>
           <div class="row"><button class="btn sm" data-ls="${x.s.id}">🔊 Konuyu dinle</button><a class="btn sm" href="#/ders/${meta.id}/konu?s=${x.s.id}">📖 Konuyu oku</a><a class="btn sm" href="#/ders/${meta.id}/test?m=weak&s=${x.s.id}&auto=1">🔁 Tekrar çöz</a></div></div>

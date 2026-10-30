@@ -32,6 +32,7 @@ python -m http.server 8000
 Dersler: `antik` (Antik Yerleşimler), `dinler`, `sanat`, `mito` (Türk Mitolojisi), `surd` (Sürdürülebilir Turizm), `turizm` (Turizm Acentacılığı), `ik` (İnsan Kaynakları), `ing` (Mesleki İngilizce).
 
 ## Notlar
+- Adıyla (ya da misafir olarak) giren kişinin çözdüğü her soru doğru/yanlış olarak kaydedilir. Yeni testlerde **çözülmüş sorular tekrar gelmez**, yalnızca henüz sorulmamış sorular sorulur. Yanlışlar “Yanlışlarımı Tekrar” modunda, istenirse tüm sorular “Çözdüklerimi de sor” seçeneğiyle tekrar çözülebilir.
 - Kayıtlar (ad / misafir, ders ders eksikler) tarayıcının yerel depolamasında tutulur. Başka cihaza taşımak için **Eksiklerim → Dışa aktar / İçe aktar**.
 - Sesli okuma tarayıcının yerleşik Türkçe sesini kullanır (Chrome, Edge, Safari).
 - PDF: **Eksiklerim → PDF olarak al → Yazdır / PDF olarak kaydet**.
